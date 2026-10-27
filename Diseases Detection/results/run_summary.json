@@ -1,0 +1,72 @@
+{
+  "clean_split": true,
+  "split_seed": 0,
+  "split_sizes": {
+    "train": 1821,
+    "val": 455,
+    "test": 760
+  },
+  "run": "strawberry",
+  "model": "yolo26s.pt",
+  "epochs": 100,
+  "imgsz": 640,
+  "batch": 16,
+  "use_rfs": true,
+  "rfs_t": 0.2,
+  "cls_gain": 0.5,
+  "train_entries_per_epoch": 2060,
+  "test_map50": 0.8647,
+  "test_map50_95": 0.7059,
+  "per_class": {
+    "angular_leafspot": {
+      "P": 0.9217,
+      "R": 0.8593,
+      "AP50": 0.9203,
+      "AP50_95": 0.7987
+    },
+    "anthracnose_fruit_rot": {
+      "P": 0.8129,
+      "R": 0.7907,
+      "AP50": 0.8141,
+      "AP50_95": 0.5377
+    },
+    "blossom_blight": {
+      "P": 0.9116,
+      "R": 0.9701,
+      "AP50": 0.9103,
+      "AP50_95": 0.7476
+    },
+    "gray_mold": {
+      "P": 0.8742,
+      "R": 0.8163,
+      "AP50": 0.8762,
+      "AP50_95": 0.5932
+    },
+    "leaf_spot": {
+      "P": 0.9066,
+      "R": 0.8019,
+      "AP50": 0.8948,
+      "AP50_95": 0.8373
+    },
+    "powdery_mildew_fruit": {
+      "P": 0.7149,
+      "R": 0.65,
+      "AP50": 0.7127,
+      "AP50_95": 0.5699
+    },
+    "powdery_mildew_leaf": {
+      "P": 0.8264,
+      "R": 0.8736,
+      "AP50": 0.9242,
+      "AP50_95": 0.8569
+    }
+  },
+  "false_alarm_rate_on_negatives": 0.022388059701492536,
+  "healthy_benchmark_n": 562,
+  "healthy_benchmark_fp": {
+    "0.35": 0.0071,
+    "0.5": 0.0036,
+    "0.6": 0.0018,
+    "0.7": 0.0
+  }
+}

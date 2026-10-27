@@ -1,0 +1,47 @@
+# ---- Rahasia & kredensial (jangan pernah di-push) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials*.json
+kaggle.json
+
+# Sertifikat HTTPS buatan app_hp (berisi private key) dan foto tangkapan HP
+app_hp/sertifikat/
+app_hp/tangkapan/
+
+# ---- Data & arsip besar (unduh ulang dari Roboflow/Kaggle) ----
+# GitHub menolak file > 100 MB; zip dataset dan hasil training cukup disimpan lokal.
+*.zip
+*.tgz
+Dataset/
+runs/
+wandb/
+*.cache
+
+# ---- Python / Jupyter ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# ---- Node ----
+node_modules/
+
+# ---- OS & editor ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# ---- Pengaturan lokal Claude Code ----
+.claude/settings.local.json

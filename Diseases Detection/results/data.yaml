@@ -1,0 +1,11 @@
+train: /kaggle/working/train_list.txt
+val: /kaggle/working/val_list.txt
+test: /kaggle/working/test_list.txt
+names:
+  0: angular_leafspot
+  1: anthracnose_fruit_rot
+  2: blossom_blight
+  3: gray_mold
+  4: leaf_spot
+  5: powdery_mildew_fruit
+  6: powdery_mildew_leaf

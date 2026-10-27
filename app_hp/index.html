@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg">
+<title>Cek Strawberry</title>
+<style>
+  :root {
+    --bg: #0e0f10; --panel: rgba(20, 22, 24, .86); --line: rgba(255, 255, 255, .14);
+    --text: #f2f2f2; --muted: #a9adb2; --accent: #e5484d; --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  body { display: flex; flex-direction: column; height: 100dvh; }
+  /* gambar kamera di antara panel atas dan bawah, supaya tidak ada bagian yang tertutup */
+  #stage { position: relative; flex: 1; min-height: 0; order: 1; }
+  #top { order: 0; }
+  #bottom { order: 2; }
+  video, #overlay, #still { position: absolute; inset: 0; width: 100%; height: 100%; }
+  video, #still { object-fit: contain; background: #000; }
+  #still { display: none; }
+  #overlay { pointer-events: none; }
+
+  .bar { z-index: 2; padding: 10px 12px; background: #16181a; }
+  #top { padding-top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #bottom { padding-bottom: max(12px, env(safe-area-inset-bottom)); display: grid; gap: 10px; }
+
+  .chip { padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; white-space: nowrap; }
+  .chip.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); }
+  .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+  .chip.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); }
+  #stat { margin-left: auto; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  #modes { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  #modes button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 10px 4px; font-weight: 600; }
+  #modes button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  #list { max-height: 18vh; overflow-y: auto; display: grid; gap: 4px; font-size: 14px; }
+  #list:empty { display: none; }
+  .row { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, .05); }
+  .row b { font-weight: 600; }
+  .row span { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+
+  .controls { display: flex; gap: 8px; align-items: center; }
+  .controls label { display: flex; align-items: center; gap: 8px; flex: 1; color: var(--muted); font-size: 13px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  button { font: inherit; color: var(--text); background: rgba(255, 255, 255, .08); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  button:active { transform: scale(.97); }
+  button.primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+  button[hidden] { display: none; }
+  .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .actions button { padding: 10px 4px; font-size: 14px; }
+
+  #msg { position: fixed; inset: 0; z-index: 3; display: none; place-items: center; padding: 24px; background: rgba(0, 0, 0, .85); text-align: center; }
+  #msg.show { display: grid; }
+  #msg div { max-width: 420px; }
+  #msg p { color: var(--muted); }
+  #toast { position: fixed; left: 50%; bottom: 50%; transform: translateX(-50%); z-index: 4; background: #222; border: 1px solid var(--line);
+    padding: 10px 14px; border-radius: 10px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+  #toast.show { opacity: 1; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" playsinline muted autoplay></video>
+  <img id="still" alt="">
+  <canvas id="overlay"></canvas>
+</div>
+
+<div id="top" class="bar">
+  <span id="light" class="chip">Cahaya: -</span>
+  <span id="conn" class="chip">Menghubungkan...</span>
+  <span id="stat"></span>
+</div>
+
+<div id="bottom" class="bar">
+  <div id="list"></div>
+  <div id="modes" role="group" aria-label="Model">
+    <button data-mode="penyakit" aria-pressed="true">Penyakit</button>
+    <button data-mode="kematangan" aria-pressed="false">Kematangan</button>
+    <button data-mode="keduanya" aria-pressed="false">Keduanya</button>
+  </div>
+  <div class="controls">
+    <label>Ambang <input id="conf" type="range" min="0.1" max="0.9" step="0.05" value="0.35"> <output id="confv">0.35</output></label>
+  </div>
+  <div class="actions">
+    <button id="pause">Jeda</button>
+    <button id="torch" hidden>Senter</button>
+    <button id="flip">Ganti kamera</button>
+    <button id="gallery">Galeri</button>
+    <button id="save" class="primary" style="grid-column: 1 / -1">Simpan foto untuk dataset</button>
+  </div>
+</div>
+
+<div id="msg"><div><h2 id="msgTitle"></h2><p id="msgText"></p><button id="retry" class="primary">Coba lagi</button> <button id="msgGallery">Uji foto dari galeri</button></div></div>
+<div id="toast"></div>
+<input id="file" type="file" accept="image/*">
+
+<script>
+const $ = s => document.querySelector(s);
+const video = $("#video"), still = $("#still"), overlay = $("#overlay"), octx = overlay.getContext("2d");
+const grab = document.createElement("canvas"), gctx = grab.getContext("2d");
+const SEND_MAX = 640;  // sisi terpanjang gambar yang dikirim ke laptop (model dilatih di 640)
+const COLORS = { ripe: "#e5484d", unripe: "#3fb950", penyakit: "#ff9f1a" };
+
+let mode = localStorage.getItem("mode") || "penyakit";
+let conf = parseFloat(localStorage.getItem("conf") || "0.35");
+let facing = "environment", stream = null, track = null, paused = false, torchOn = false;
+let last = null, busy = false, times = [], stillMode = false, wakeLock = null;
+
+function toast(text, ms = 1800) {
+  const t = $("#toast"); t.textContent = text; t.classList.add("show");
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), ms);
+}
+function showMsg(title, text) { $("#msgTitle").textContent = title; $("#msgText").textContent = text; $("#msg").classList.add("show"); }
+function hideMsg() { $("#msg").classList.remove("show"); }
+
+function setMode(m) {
+  mode = m; localStorage.setItem("mode", m);
+  document.querySelectorAll("#modes button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === m)));
+  last = null; draw();
+  if (stillMode) analyzeStill();
+}
+document.querySelectorAll("#modes button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$("#conf").value = conf; $("#confv").textContent = conf.toFixed(2);
+$("#conf").oninput = e => { conf = parseFloat(e.target.value); $("#confv").textContent = conf.toFixed(2); localStorage.setItem("conf", conf); };
+$("#conf").onchange = () => { if (stillMode) analyzeStill(); };
+
+async function startCamera() {
+  hideMsg();
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    showMsg("Kamera tidak bisa dibuka", "Halaman harus dibuka lewat https:// (alamat yang dicetak di terminal laptop). Anda tetap bisa menguji foto dari Galeri.");
+    return;
+  }
+  stream?.getTracks().forEach(t => t.stop());
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false, video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } } });
+  } catch (e) {
+    showMsg("Izin kamera ditolak", "Izinkan akses kamera untuk situs ini di pengaturan browser, lalu tekan Coba lagi. (" + e.name + ")");
+    return;
+  }
+  track = stream.getVideoTracks()[0];
+  video.srcObject = stream;
+  await video.play().catch(() => {});
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  $("#torch").hidden = !caps.torch; torchOn = false; $("#torch").textContent = "Senter";
+  if (!stillMode) leaveStill();  // jangan menutup foto galeri yang sedang dilihat
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) {}
+}
+$("#retry").onclick = startCamera;
+$("#flip").onclick = () => { facing = facing === "environment" ? "user" : "environment"; startCamera(); };
+$("#torch").onclick = async () => {
+  try { torchOn = !torchOn; await track.applyConstraints({ advanced: [{ torch: torchOn }] }); $("#torch").textContent = torchOn ? "Senter: on" : "Senter"; }
+  catch (_) { toast("Senter tidak didukung kamera ini"); }
+};
+$("#pause").onclick = () => {
+  if (stillMode) { leaveStill(); return; }
+  paused = !paused; $("#pause").textContent = paused ? "Lanjut" : "Jeda";
+  paused ? video.pause() : video.play();
+};
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState === "visible" && wakeLock !== null) { try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) {} }
+});
+
+// --- kirim gambar ke laptop ---
+async function post(path, blob) {
+  const res = await fetch(`${path}?mode=${mode}&conf=${conf}`, { method: "POST", body: blob, headers: { "Content-Type": "image/jpeg" } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+function frameBlob(source, w, h, maxSide, quality) {
+  const s = Math.min(1, maxSide / Math.max(w, h));
+  grab.width = Math.round(w * s); grab.height = Math.round(h * s);
+  gctx.drawImage(source, 0, 0, grab.width, grab.height);
+  return new Promise(r => grab.toBlob(r, "image/jpeg", quality));
+}
+function setConn(ok, text) { const c = $("#conn"); c.textContent = text; c.className = "chip " + (ok ? "ok" : "bad"); }
+
+async function loop() {
+  if (!stillMode && !paused && !busy && video.videoWidth && document.visibilityState === "visible") {
+    busy = true;
+    const t0 = performance.now();
+    try {
+      const blob = await frameBlob(video, video.videoWidth, video.videoHeight, SEND_MAX, 0.8);
+      const r = await post("/deteksi", blob);
+      if (!stillMode) { last = r; draw(); }
+      times.push(performance.now() - t0); if (times.length > 10) times.shift();
+      const avg = times.reduce((a, b) => a + b, 0) / times.length;
+      $("#stat").textContent = `${(1000 / avg).toFixed(1)} fps · model ${r.ms} ms`;
+      setConn(true, "Terhubung");
+    } catch (e) {
+      setConn(false, "Laptop tidak terjangkau");
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    busy = false;
+  }
+  requestAnimationFrame(loop);
+}
+
+// --- gambar hasil ---
+function sourceRect() {
+  const el = stillMode ? still : video;
+  const vw = stillMode ? still.naturalWidth : video.videoWidth, vh = stillMode ? still.naturalHeight : video.videoHeight;
+  const cw = overlay.clientWidth, ch = overlay.clientHeight;
+  if (!vw || !vh) return null;
+  const s = Math.min(cw / vw, ch / vh);  // object-fit: contain
+  return { x: (cw - vw * s) / 2, y: (ch - vh * s) / 2, w: vw * s, h: vh * s };
+}
+function lightChip(r) {
+  const c = $("#light");
+  if (!r) { c.textContent = "Cahaya: -"; c.className = "chip"; return; }
+  const pct = Math.round(r.cahaya * 100);
+  let cls = "ok", txt = `Cahaya ${pct}%`;
+  if (r.silau > 0.15) { cls = "warn"; txt += " · terlalu silau"; }
+  else if (r.cahaya < 0.25) { cls = "bad"; txt += " · terlalu gelap"; }
+  else if (r.cahaya < 0.38) { cls = "warn"; txt += " · agak redup"; }
+  c.textContent = txt; c.className = "chip " + cls;
+}
+function colorOf(d) { return d.task === "kematangan" ? (COLORS[d.name] || "#4ea1ff") : COLORS.penyakit; }
+function textOf(d) {
+  let t = `${d.label} ${(d.conf * 100).toFixed(0)}%`;
+  if (d.task === "kematangan" && d.red != null) t += ` · merah ${Math.round(d.red * 100)}%`;
+  return t;
+}
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  overlay.width = Math.round(overlay.clientWidth * dpr); overlay.height = Math.round(overlay.clientHeight * dpr);
+  octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  octx.clearRect(0, 0, overlay.clientWidth, overlay.clientHeight);
+  lightChip(last);
+  renderList();
+  const rect = sourceRect();
+  if (!last || !rect) return;
+  const sx = rect.w / last.w, sy = rect.h / last.h;
+  octx.font = "600 13px system-ui, sans-serif"; octx.textBaseline = "top";
+  const placed = [];  // label yang sudah digambar, supaya label kotak yang berdekatan tidak saling menimpa
+  for (const d of last.dets) {
+    const [x0, y0, x1, y1] = d.box;
+    const x = rect.x + x0 * sx, y = rect.y + y0 * sy, w = (x1 - x0) * sx, h = (y1 - y0) * sy;
+    const col = colorOf(d), text = textOf(d);
+    octx.lineWidth = 2.5; octx.strokeStyle = col; octx.strokeRect(x, y, w, h);
+    const tw = octx.measureText(text).width + 10;
+    let ty = y >= 22 ? y - 21 : y + h + 1;
+    for (let k = 0; k < 8 && placed.some(p => x < p.x + p.w && x + tw > p.x && ty < p.y + 20 && ty + 20 > p.y); k++) ty += 21;
+    placed.push({ x, y: ty, w: tw });
+    octx.fillStyle = col; octx.fillRect(x - 1.25, ty, tw, 20);
+    octx.fillStyle = "#fff"; octx.fillText(text, x + 4, ty + 3);
+  }
+}
+function renderList() {
+  const list = $("#list"); list.innerHTML = "";
+  if (!last) return;
+  if (!last.dets.length) {
+    list.innerHTML = `<div class="row"><b>${mode === "kematangan" ? "Tidak ada buah terdeteksi" : mode === "penyakit" ? "Tidak ada penyakit terdeteksi" : "Tidak ada deteksi"}</b><span>ambang ${conf.toFixed(2)}</span></div>`;
+    return;
+  }
+  const groups = new Map();
+  for (const d of last.dets) {
+    const key = d.task === "kematangan" && d.level ? `${d.label} (warna: ${d.level})` : d.label;
+    const g = groups.get(key) || { n: 0, best: 0, color: colorOf(d) };
+    g.n++; g.best = Math.max(g.best, d.conf); groups.set(key, g);
+  }
+  for (const [key, g] of [...groups].sort((a, b) => b[1].best - a[1].best)) {
+    const row = document.createElement("div"); row.className = "row";
+    row.innerHTML = `<b><i class="dot" style="background:${g.color}"></i></b><span>×${g.n} · ${(g.best * 100).toFixed(0)}%</span>`;
+    row.querySelector("b").append(key);
+    list.append(row);
+  }
+}
+window.addEventListener("resize", draw);
+
+// --- simpan foto (resolusi penuh) ke laptop untuk dataset ---
+$("#save").onclick = async () => {
+  try {
+    const blob = stillMode ? await (await fetch(still.src)).blob()
+                           : await frameBlob(video, video.videoWidth, video.videoHeight, 4096, 0.92);
+    const r = await post("/simpan", blob);
+    toast(`Tersimpan di laptop: ${r.saved}`);
+  } catch (e) { toast("Gagal menyimpan: " + e.message); }
+};
+
+// --- uji foto dari galeri ---
+$("#gallery").onclick = () => $("#file").click();
+$("#msgGallery").onclick = () => { hideMsg(); $("#file").click(); };
+$("#file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (still.src) URL.revokeObjectURL(still.src);
+  const ok = await new Promise(res => { still.onload = () => res(true); still.onerror = () => res(false); still.src = URL.createObjectURL(f); });
+  e.target.value = "";
+  if (!ok) { toast("Foto tidak bisa dibuka"); return; }
+  stillMode = true; still.style.display = "block"; video.style.visibility = "hidden";
+  $("#pause").textContent = "Kamera live";
+  analyzeStill();
+};
+async function analyzeStill() {
+  try {
+    const blob = await frameBlob(still, still.naturalWidth, still.naturalHeight, SEND_MAX, 0.9);
+    last = await post("/deteksi", blob); draw(); setConn(true, "Terhubung");
+  } catch (e) { setConn(false, "Laptop tidak terjangkau"); }
+}
+function leaveStill() {
+  stillMode = false; still.style.display = "none"; video.style.visibility = "visible";
+  paused = false; $("#pause").textContent = "Jeda"; last = null; draw();
+}
+
+setMode(mode);
+startCamera();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

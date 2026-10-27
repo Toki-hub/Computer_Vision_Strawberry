@@ -1,0 +1,10 @@
+{
+  "name": "Cek Strawberry",
+  "short_name": "Strawberry",
+  "description": "Uji model penyakit dan kematangan strawberry lewat kamera HP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0e0f10",
+  "theme_color": "#111111",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

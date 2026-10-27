@@ -1,0 +1,46 @@
+{
+  "version": "007bd22b1039",
+  "imgsz": 416,
+  "sizes": [
+    320,
+    416,
+    640
+  ],
+  "ort": "1.30.0",
+  "models": {
+    "penyakit": {
+      "file": "models/penyakit.onnx",
+      "names": [
+        "angular_leafspot",
+        "anthracnose_fruit_rot",
+        "blossom_blight",
+        "gray_mold",
+        "leaf_spot",
+        "powdery_mildew_fruit",
+        "powdery_mildew_leaf"
+      ],
+      "labels": [
+        "bercak daun bersudut",
+        "busuk buah antraknosa",
+        "hawar bunga",
+        "kapang abu-abu",
+        "bercak daun",
+        "embun tepung buah",
+        "embun tepung daun"
+      ],
+      "bytes": 38936232
+    },
+    "kematangan": {
+      "file": "models/kematangan.onnx",
+      "names": [
+        "ripe",
+        "unripe"
+      ],
+      "labels": [
+        "matang",
+        "mentah"
+      ],
+      "bytes": 38928325
+    }
+  }
+}

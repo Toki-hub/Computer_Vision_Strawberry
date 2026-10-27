@@ -1,7 +1,7 @@
 // Service worker: menyimpan aplikasi + model di HP supaya jalan tanpa internet, dan menambahkan header
 // cross-origin isolation (COOP/COEP) agar onnxruntime boleh memakai beberapa inti CPU.
 // VERSION diisi otomatis oleh build.py; versi baru = cache baru, cache lama dihapus.
-const VERSION = "007bd22b1039";
+const VERSION = "0d95120bbc8b";
 const CACHE = "strawberry-" + VERSION;
 const SHELL = ["./", "index.html", "app.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "models.json",
   "ort/ort.min.js", "ort/ort-wasm-simd-threaded.jsep.mjs"];

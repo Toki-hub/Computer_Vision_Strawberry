@@ -1,11 +1,6 @@
 {
-  "version": "007bd22b1039",
-  "imgsz": 416,
-  "sizes": [
-    320,
-    416,
-    640
-  ],
+  "version": "0d95120bbc8b",
+  "imgsz": 640,
   "ort": "1.30.0",
   "models": {
     "penyakit": {
@@ -28,7 +23,7 @@
         "embun tepung buah",
         "embun tepung daun"
       ],
-      "bytes": 38936232
+      "bytes": 38165413
     },
     "kematangan": {
       "file": "models/kematangan.onnx",
@@ -40,7 +35,7 @@
         "matang",
         "mentah"
       ],
-      "bytes": 38928325
+      "bytes": 38157538
     }
   }
 }

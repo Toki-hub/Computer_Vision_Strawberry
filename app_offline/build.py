@@ -50,8 +50,7 @@ def export_models(imgsz, work):
         tmp = work / f"{task}.pt"
         shutil.copyfile(src, tmp)  # export ditulis di samping file .pt, jadi pakai salinan
         model = YOLO(str(tmp))
-        # dynamic=True: satu file model bisa dijalankan di beberapa ukuran input (pilihan "Kecepatan" di aplikasi)
-        onnx_path = Path(model.export(format="onnx", imgsz=imgsz, opset=17, simplify=True, dynamic=True))
+        onnx_path = Path(model.export(format="onnx", imgsz=imgsz, opset=17, simplify=True, dynamic=False))
         dest = WWW / "models" / f"{task}.onnx"
         shutil.copyfile(onnx_path, dest)
         names = [model.names[i] for i in sorted(model.names)]
@@ -87,21 +86,16 @@ def make_icons():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--imgsz", type=int, default=416, help="ukuran input bawaan di aplikasi (model dilatih di 640)")
-    ap.add_argument("--sizes", type=int, nargs="+", default=[320, 416, 640],
-                    help="pilihan ukuran input di aplikasi: terkecil = Cepat, terbesar = Akurat (kelipatan 32)")
+    ap.add_argument("--imgsz", type=int, default=640, help="ukuran input model (640 = sama dengan training)")
     ap.add_argument("--skip-ort", action="store_true", help="jangan unduh ulang onnxruntime-web jika sudah ada")
     args = ap.parse_args()
-    sizes = sorted(set(args.sizes) | {args.imgsz})
-    if any(s % 32 for s in sizes):
-        raise SystemExit(f"Ukuran input harus kelipatan 32: {sizes}")
 
     (WWW / "models").mkdir(parents=True, exist_ok=True)
     (WWW / "ort").mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="app_offline_") as tmp:
         work = Path(tmp)
         print("1) Export model ke ONNX")
-        models = export_models(max(sizes), work)
+        models = export_models(args.imgsz, work)
         if not (args.skip_ort and all((WWW / "ort" / f).is_file() for f in ORT_FILES)):
             print("2) Mengambil onnxruntime-web")
             fetch_ort(work)
@@ -114,7 +108,7 @@ def main():
             h.update(f.relative_to(WWW).as_posix().encode())
             h.update(f.read_bytes())
     version = h.hexdigest()[:12]
-    meta = {"version": version, "imgsz": args.imgsz, "sizes": sizes, "ort": ORT_VERSION, "models": models}
+    meta = {"version": version, "imgsz": args.imgsz, "ort": ORT_VERSION, "models": models}
     (WWW / "models.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     sw = WWW / "sw.js"
     text = sw.read_text(encoding="utf-8")
